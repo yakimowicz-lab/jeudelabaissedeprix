@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Le Jeu de la Baisse de Prix</title>
+</head>
+<body>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Source+Sans+3:wght@400;600;700&display=swap');
+
+  :root{
+    --bg:#F7F4F7;
+    --surface:#FFFFFF;
+    --surface-2:#F1E9EF;
+    --ink:#241C29;
+    --ink-soft:#6E6476;
+    --line:#E4DAE2;
+
+    --agent:#8E2283;      --agent-bg:#F4E4F1;
+    --vendeur:#0F6B54;    --vendeur-bg:#E1F3EC;
+
+    --good:#0F6B54;
+    --bad:#A6297E;
+    --warn:#B8862A;       --warn-bg:#F7EEDD;
+    --shadow: 0 1px 2px rgba(36,28,41,.06), 0 10px 28px -14px rgba(36,28,41,.28);
+    --radius-l:20px;
+    --radius-m:14px;
+    --radius-s:9px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#18131C; --surface:#211A26; --surface-2:#2B2130; --ink:#F1EAF0; --ink-soft:#B9AEC0; --line:#3B2E3F;
+      --agent:#E08FD4;     --agent-bg:#3A2438;
+      --vendeur:#59D9B4;   --vendeur-bg:#1C3A32;
+      --good:#59D9B4; --bad:#EC9BCF;
+      --warn:#E3B95C; --warn-bg:#3A3120;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#18131C; --surface:#211A26; --surface-2:#2B2130; --ink:#F1EAF0; --ink-soft:#B9AEC0; --line:#3B2E3F;
+    --agent:#E08FD4;     --agent-bg:#3A2438;
+    --vendeur:#59D9B4;   --vendeur-bg:#1C3A32;
+    --good:#59D9B4; --bad:#EC9BCF;
+    --warn:#E3B95C; --warn-bg:#3A3120;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px -14px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box;}
+  [hidden]{ display:none !important; }
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.01ms !important; transition-duration:.01ms !important; scroll-behavior:auto !important;} }
+
+  body{ background:var(--bg); color:var(--ink); font-family:'Source Sans 3', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; line-height:1.45; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3,.display{ font-family:'Sora', 'Source Sans 3', system-ui, sans-serif; letter-spacing:-0.01em; text-wrap:balance; }
+
+  .shell{ max-width:720px; margin:0 auto; padding:22px 16px 32px; min-height:100dvh; display:flex; flex-direction:column; }
+
+  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:18px; }
+  .brand-text{ font-family:'Sora',sans-serif; font-weight:700; font-size:13.5px; color:var(--ink); line-height:1.15; }
+  .brand-text span{ display:block; font-family:'Source Sans 3',sans-serif; font-weight:600; font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.08em; margin-top:2px; }
+
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-l); box-shadow:var(--shadow); }
+  .intro-card{ padding:30px 26px 28px; }
+  .eyebrow{ display:inline-flex; align-items:center; gap:7px; font-size:11.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--agent); background:var(--agent-bg); padding:6px 12px; border-radius:999px; margin-bottom:16px; }
+  .intro-card h1{ font-size:clamp(26px,6vw,34px); font-weight:800; margin:0 0 12px; }
+  .intro-card p{ margin:0 0 14px; color:var(--ink-soft); font-size:15px; max-width:58ch; }
+  .intro-card .objective{ background:var(--surface-2); border-radius:var(--radius-m); padding:16px 18px; margin:18px 0; font-size:14.5px; color:var(--ink); }
+  .intro-card .objective b{ color:var(--agent); }
+  .intro-card .warnbox{ background:var(--warn-bg); border-radius:var(--radius-m); padding:14px 18px; margin:0 0 18px; font-size:13.5px; color:var(--ink); border:1px dashed var(--warn); }
+  .intro-card .warnbox b{ color:var(--warn); }
+  .mini-label{ font-weight:700; font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-soft); margin:4px 0 8px; }
+
+  .cast{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin:0 0 20px; }
+  .cast-item{ display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px solid var(--line); border-radius:var(--radius-m); background:var(--surface); }
+  .avatar{ flex-shrink:0; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Sora',sans-serif; font-weight:700; font-size:13px; color:#fff; }
+  .cast-item .who{ font-weight:700; font-size:13.5px; }
+  .cast-item .role{ font-size:12px; color:var(--ink-soft); margin-top:1px; }
+  .rules{ font-size:13px; color:var(--ink-soft); margin:0 0 22px; }
+
+  .btn{ font-family:'Source Sans 3',sans-serif; font-weight:700; font-size:15px; border:none; border-radius:999px; padding:14px 26px; cursor:pointer; transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease; }
+  .btn:focus-visible{ outline:2.5px solid var(--agent); outline-offset:2px; }
+  .btn-primary{ background:var(--agent); color:#fff; box-shadow:0 6px 18px -8px var(--agent); }
+  .btn-primary:hover{ transform:translateY(-1px); }
+  .btn-primary:active{ transform:translateY(0); }
+  :root[data-theme="dark"] .btn-primary{ color:#1a0f19; }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .btn-primary{ color:#1a0f19; } }
+
+  #screen-game{ display:flex; flex-direction:column; height:calc(100dvh - 150px); min-height:480px; }
+  .stepper{ display:flex; gap:8px; margin-bottom:14px; flex-shrink:0; }
+  .step-seg{ flex:1; min-width:0; }
+  .step-seg .bar{ height:4px; border-radius:3px; background:var(--line); overflow:hidden; }
+  .step-seg .bar i{ display:block; height:100%; width:0%; background:var(--agent); transition:width .3s ease; }
+  .step-seg.done .bar i, .step-seg.active .bar i{ width:100%; }
+  .step-seg .lbl{ font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .step-seg.active .lbl{ color:var(--agent); }
+
+  .transcript{ flex:1; min-height:0; overflow-y:auto; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius-l) var(--radius-l) 0 0; padding:20px 14px; display:flex; flex-direction:column; gap:12px; scroll-behavior:smooth; }
+
+  .msg-row{ display:flex; gap:9px; max-width:94%; animation:rise .28s ease both; }
+  @keyframes rise{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+  .msg-row.left{ align-self:flex-start; }
+  .msg-row.right{ align-self:flex-end; flex-direction:row-reverse; }
+  .msg-row .avatar{ width:28px; height:28px; font-size:11px; margin-top:2px; }
+  .bubble-col{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .msg-row.right .bubble-col{ align-items:flex-end; }
+  .msg-name{ font-size:11px; font-weight:700; color:var(--ink-soft); padding:0 4px; }
+  .bubble{ padding:11px 14px; border-radius:var(--radius-m); font-size:14.5px; box-shadow:var(--shadow); }
+  .msg-row.left .bubble{ background:var(--surface); border-top-left-radius:4px; color:var(--ink); }
+  .msg-row.right .bubble{ border-top-right-radius:4px; color:#fff; }
+  :root[data-theme="dark"] .msg-row.right .bubble{ color:#1a0f19; }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .msg-row.right .bubble{ color:#1a0f19; } }
+
+  .narration{ align-self:center; max-width:90%; text-align:center; font-size:12.5px; color:var(--ink-soft); background:var(--surface); border:1px dashed var(--line); border-radius:var(--radius-m); padding:8px 16px; animation:rise .28s ease both; }
+
+  .scene-break{ align-self:stretch; margin:6px 0 4px; animation:rise .3s ease both; }
+  .scene-break .divider{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .scene-break .divider .line{ flex:1; height:1px; background:var(--line); }
+  .scene-break .divider .num{ font-family:'Sora',sans-serif; font-weight:800; font-size:11px; color:#fff; background:var(--agent); width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  :root[data-theme="dark"] .scene-break .divider .num{ color:#1a0f19; }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .scene-break .divider .num{ color:#1a0f19; } }
+  .scene-break .divider .ttl{ font-family:'Sora',sans-serif; font-weight:700; font-size:13px; color:var(--ink); text-align:center; }
+  .scene-break .loc{ font-size:12px; color:var(--ink-soft); text-align:center; margin-bottom:12px; }
+  .scene-break .intro-line{ text-align:center; max-width:86%; margin:0 auto; font-size:13px; color:var(--ink-soft); background:var(--surface); border:1px dashed var(--line); border-radius:14px; padding:10px 16px; }
+  .scene-break .discovery{ text-align:center; max-width:86%; margin:8px auto 0; font-size:12.5px; color:var(--agent); background:var(--agent-bg); border-radius:12px; padding:8px 14px; }
+
+  .doc-card{ max-width:92%; margin:10px auto 0; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-m); padding:12px 14px; box-shadow:var(--shadow); }
+  .doc-card .doc-h{ font-size:10.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:9px; }
+  .doc-stats{ display:flex; flex-wrap:wrap; gap:8px; }
+  .doc-stats .stat{ flex:1 1 90px; background:var(--surface-2); border-radius:var(--radius-s); padding:8px 10px; }
+  .doc-stats .stat b{ display:block; font-family:'Sora',sans-serif; font-size:17px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .doc-stats .stat span{ display:block; font-size:11.5px; color:var(--ink-soft); line-height:1.25; margin-top:2px; }
+  .doc-stats .stat.alert b{ color:var(--bad); }
+
+  .typing{ display:flex; gap:4px; padding:12px 14px; background:var(--surface); border-radius:var(--radius-m); border-top-left-radius:4px; width:fit-content; box-shadow:var(--shadow); }
+  .typing i{ width:6px; height:6px; border-radius:50%; background:var(--ink-soft); opacity:.5; animation:bounce 1s infinite ease-in-out; }
+  .typing i:nth-child(2){ animation-delay:.15s; }
+  .typing i:nth-child(3){ animation-delay:.3s; }
+  @keyframes bounce{ 0%,60%,100%{ transform:translateY(0); opacity:.4; } 30%{ transform:translateY(-4px); opacity:.9; } }
+
+  .tray{ flex-shrink:0; max-height:52%; overflow-y:auto; background:var(--surface); border:1px solid var(--line); border-top:none; border-radius:0 0 var(--radius-l) var(--radius-l); padding:14px; display:flex; flex-direction:column; gap:8px; }
+  .tray:empty{ display:none; }
+  .choice-btn{ text-align:left; background:var(--surface-2); border:1.5px solid var(--line); border-radius:var(--radius-m); padding:12px 15px; font-family:'Source Sans 3',sans-serif; font-size:14px; line-height:1.4; color:var(--ink); cursor:pointer; transition:border-color .15s ease, background .15s ease, transform .1s ease; }
+  .choice-btn:hover{ border-color:var(--agent); background:var(--agent-bg); }
+  .choice-btn:active{ transform:scale(.995); }
+  .choice-btn:focus-visible{ outline:2.5px solid var(--agent); outline-offset:2px; }
+  .tray .continue-wrap{ display:flex; justify-content:center; padding:4px 0; }
+
+  #screen-ending{ padding-top:6px; }
+  .verdict-eyebrow{ font-size:11.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px; }
+  .verdict h1{ font-size:clamp(22px,5.2vw,28px); font-weight:800; margin:0 0 14px; }
+  .verdict-text{ font-size:15px; color:var(--ink); margin:0 0 24px; max-width:62ch; }
+
+  .ladder{ display:flex; align-items:stretch; gap:6px; margin-bottom:26px; }
+  .ladder .cell{ flex:1; min-width:0; border-radius:var(--radius-m); padding:14px 8px; text-align:center; background:var(--surface-2); border:1.5px solid var(--line); }
+  .ladder .cell .tag{ display:block; font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:6px; }
+  .ladder .cell .lbl{ display:block; font-size:13px; font-weight:700; color:var(--ink-soft); }
+  .ladder .cell .prix{ display:block; font-family:'Sora',sans-serif; font-size:16px; font-weight:800; color:var(--ink-soft); margin-top:6px; font-variant-numeric:tabular-nums; }
+  .ladder .cell.hit{ background:var(--agent); border-color:var(--agent); }
+  .ladder .cell.hit .tag, .ladder .cell.hit .lbl, .ladder .cell.hit .prix{ color:#fff; }
+  :root[data-theme="dark"] .ladder .cell.hit .tag, :root[data-theme="dark"] .ladder .cell.hit .lbl, :root[data-theme="dark"] .ladder .cell.hit .prix{ color:#1a0f19; }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ladder .cell.hit .tag, :root:not([data-theme="light"]) .ladder .cell.hit .lbl, :root:not([data-theme="light"]) .ladder .cell.hit .prix{ color:#1a0f19; } }
+  .ladder .arrow{ display:flex; align-items:center; color:var(--ink-soft); font-size:16px; }
+
+  .section-label{ font-weight:700; font-size:11.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-soft); margin:0 0 10px; }
+  .path{ display:flex; flex-direction:column; gap:8px; margin-bottom:24px; }
+  .path-row{ display:grid; grid-template-columns:auto 1fr; gap:4px 12px; align-items:start; padding:12px 14px; border:1px solid var(--line); border-radius:var(--radius-m); background:var(--surface); }
+  .path-row .pill{ grid-row:1 / span 2; align-self:center; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:5px 10px; border-radius:999px; white-space:nowrap; min-width:92px; text-align:center; }
+  .pill.ok{ background:var(--vendeur-bg); color:var(--good); }
+  .pill.mid{ background:var(--warn-bg); color:var(--warn); }
+  .pill.ko{ background:var(--agent-bg); color:var(--bad); }
+  .path-row .pt{ font-weight:700; font-size:13.5px; }
+  .path-row .pd{ font-size:13px; color:var(--ink-soft); }
+
+  .tips{ display:flex; flex-direction:column; gap:10px; margin-bottom:22px; }
+  .tip{ border-radius:var(--radius-m); padding:14px 16px; font-size:14px; border:1px solid var(--line); background:var(--surface); }
+  .tip b{ display:block; font-size:11.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; margin-bottom:5px; }
+  .tip.good b{ color:var(--good); } .tip.bad b{ color:var(--bad); }
+
+  .golden{ background:var(--surface-2); border-radius:var(--radius-m); padding:16px 18px; font-size:14.5px; font-weight:600; margin-bottom:24px; }
+  .golden b{ color:var(--agent); }
+
+  footer.note{ margin-top:auto; padding-top:26px; font-size:12px; color:var(--ink-soft); }
+
+  @media (max-width:480px){
+    .intro-card{ padding:24px 18px 22px; }
+    .ladder .cell .prix{ font-size:14px; }
+    .path-row{ grid-template-columns:1fr; }
+    .path-row .pill{ grid-row:auto; justify-self:start; }
+  }
+</style>
+
+<div class="shell">
+
+  <div class="topbar">
+    <div class="brand-text">Atelier suivi vendeur<span>Serious game · baisse de prix</span></div>
+  </div>
+
+  <!-- ===================== INTRO ===================== -->
+  <section id="screen-intro">
+    <div class="card intro-card">
+      <span class="eyebrow">Serious game · Suivi vendeur</span>
+      <h1>Le Jeu de la Baisse de Prix</h1>
+      <p>Un mois après la mise en vente d'un T2 vue mer de 53 m² à Lacanau Océan, affiché à 222 000 € (4 189 €/m²), vous vous rendez chez M. Delmas, son propriétaire, pour le rendez-vous de suivi. Vous avez en main votre compte-rendu de commercialisation : 5 pages, à dérouler avec lui.</p>
+
+      <div class="objective">
+        <b>Votre mission —</b> l'amener à prendre conscience de la réalité du marché, page après page, et à accepter une baisse de prix. Sans le braquer car c'est à lui de le constater.
+      </div>
+
+      <div class="mini-label">Les personnages</div>
+      <div class="cast">
+        <div class="cast-item"><span class="avatar" style="background:var(--agent)">V</span><div><div class="who">Vous</div><div class="role">le consultant immobilier</div></div></div>
+        <div class="cast-item"><span class="avatar" style="background:var(--vendeur)">D</span><div><div class="who">M. Delmas</div><div class="role">propriétaire, seul décideur, très attaché à sa vue mer</div></div></div>
+      </div>
+
+      <p class="rules">Le rendez-vous se déroule en 4 discussions, une par grande étape du compte-rendu. À chaque réplique, choisissez ce que vous diriez. Aucune réponse n'est signalée bonne ou mauvaise dans l'instant — mais vos choix, cumulés, décident de l'issue : refus de baisse, baisse à mi-chemin, ou baisse alignée sur le marché. Vous verrez le résultat à la fin.</p>
+
+      <button class="btn btn-primary" id="btn-start" type="button">Commencer le rendez-vous →</button>
+    </div>
+  </section>
+
+  <!-- ===================== GAME ===================== -->
+  <section id="screen-game" hidden>
+    <div class="stepper" id="stepper"></div>
+    <div class="transcript" id="transcript"></div>
+    <div class="tray" id="tray"></div>
+  </section>
+
+  <!-- ===================== ENDING ===================== -->
+  <section id="screen-ending" hidden>
+    <div class="verdict-eyebrow">Résultat du rendez-vous</div>
+    <div class="verdict">
+      <h1 id="end-headline"></h1>
+      <p class="verdict-text" id="end-text"></p>
+    </div>
+
+    <div class="ladder" id="end-ladder"></div>
+
+    <div class="section-label">Votre parcours, page par page</div>
+    <div class="path" id="end-path"></div>
+
+    <div class="tips" id="end-tips"></div>
+
+    <div class="golden">La règle d'or — <b>ce n'est pas au consultant de convaincre, c'est au vendeur de constater</b>. Page après page, vous lui faites voir les faits ; c'est lui qui prononce la baisse.</div>
+
+    <button class="btn btn-primary" id="btn-replay" type="button">Rejouer →</button>
+  </section>
+
+  <footer class="note">Outil pédagogique à usage interne — accompagner un vendeur vers un ajustement de prix. Données du compte-rendu fictives, à visée pédagogique.</footer>
+</div>
+
+<script>
+(function(){
+
+  var SPEAKERS = {
+    agent:   { name:'Vous',       colorVar:'--agent' },
+    vendeur: { name:'M. Delmas',  colorVar:'--vendeur' }
+  };
+
+  var SCENES = [
+    /* ---------- 1 · LE BILAN (pages 1-2) ---------- */
+    {
+      label:'Le bilan', title:'Discussion 1 · Le bilan de la commercialisation',
+      location:"Chez M. Delmas — rendez-vous de suivi, un mois après la mise en vente",
+      intro:"M. Delmas vous accueille et vous installe à sa table. Vous ouvrez le compte-rendu sur la page « Bilan de la commercialisation ».",
+      context:"Contexte — vous avez démarré la commercialisation au-dessus du marché, à 222 000 €, et M. Delmas espérait une offre. Il n'a pas encore envie d'entendre parler de baisse.",
+      doc:{ title:"Compte-rendu · Page 2 — Bilan de la commercialisation", stats:[
+        {v:"14", l:"appels reçus"}, {v:"5", l:"visites réalisées"}, {v:"0", l:"offre reçue", alert:true}, {v:"4 %", l:"taux d'attractivité (seuil usuel : 10 %)", alert:true}
+      ]},
+      outro:"Vous tournez la page : place à la page 3, le devenir des visiteurs.",
+      steps:[
+        { say:"Bonjour ! Alors, un mois après la mise en vente, j'imagine que vous avez de bonnes nouvelles pour moi ?",
+          choices:[
+            { text:"Bonjour M. Delmas. J'ai préparé un compte-rendu complet de ce premier mois, que nous allons parcourir page par page. Avant de l'ouvrir : comment vivez-vous ces quatre premières semaines ?", score:2,
+              react:"Honnêtement, avec un peu d'impatience : le bien est superbe, je pensais qu'on aurait déjà une offre." },
+            { text:"Pas d'offre pour l'instant, mais il y a eu de l'activité. Je vous propose de regarder le compte-rendu ensemble.", score:0,
+              react:"Pas d'offre ? Déjà ?" },
+            { text:"Pas d'offre, non. C'est ce que je vous avais annoncé : un prix trop élevé, ça ne donne aucun résultat.", score:-1, faux:true,
+              react:"Attendez, on n'a même pas ouvert le dossier et vous me faites déjà la leçon ?" }
+          ] },
+        { say:"Bon. Concrètement, combien de personnes sont venues voir mon appartement ?",
+          choices:[
+            { text:"Sur ce premier mois : 14 appels, 5 visites... et aucune offre. Je préfère vous poser la question : un bien qui attire des visites mais aucune offre, qu'est-ce que cela vous dit ?", score:2,
+              react:"Que les gens ont besoin de temps, peut-être ? 14 appels et 5 visites en un mois, ce n'est déjà pas mal." },
+            { text:"14 appels, 5 visites, 0 offre. C'est en dessous de ce qu'on espérait.", score:0,
+              react:"En dessous ? Pourtant, 5 visites en un mois, ce n'est pas rien." },
+            { text:"Quelques visites, c'est déjà bien : il suffit d'être patient, les offres vont arriver.", score:-1, faux:true,
+              react:"C'est ce que je pensais : il faut laisser le temps au temps." }
+          ] },
+        { say:"Et ce compteur avec « 4 % », c'est quoi exactement ? C'est bon ou pas ?",
+          choices:[
+            { text:"C'est un indicateur de performance de l'annonce. En dessous de 10 %, c'est plutôt faible, et vous êtes à 4 %.", score:0,
+              react:"Donc l'annonce est mal faite, c'est ça ?" },
+            { text:"C'est la part des internautes qui cliquent sur votre annonce quand elle s'affiche dans les résultats. Le repère habituel est de 10 % : à 4 %, elle est moins cliquée que la moyenne. À votre avis, qu'est-ce qui pousse un acheteur à ne pas cliquer ?", score:2,
+              react:"Les photos, le titre... peut-être que l'annonce n'est pas assez attractive." },
+            { text:"4 %, c'est un flop : votre annonce n'intéresse presque personne.", score:-1, faux:true,
+              react:"Un flop ? Vue mer, balcon plein sud, et vous osez dire que ça n'intéresse personne ?" }
+          ] },
+        { say:"Moi, je pense que c'est un problème d'annonce. Refaites les photos, changez le titre, et ça repartira.",
+          choices:[
+            { text:"Les photos sont très bien. Le problème, c'est le prix, c'est évident.", score:-1, faux:true,
+              react:"Vous ne remettez jamais rien en cause, vous ! Ça m'agace." },
+            { text:"Très bien, je refais les photos et le titre cette semaine, ça devrait relancer l'annonce.", score:0,
+              react:"Parfait. Vous verrez, ça repartira." },
+            { text:"Retravailler les photos et le titre est un vrai levier, on le fera. Mais un bien avec cette vue peut aussi être peu cliqué à cause du prix affiché dans les résultats. Voyons d'abord ce que les visiteurs nous ont dit : ils nous en apprendront plus.", score:2,
+              react:"D'accord, voyons ça. Mais je reste persuadé que c'est l'annonce." }
+          ] }
+      ]
+    },
+
+    /* ---------- 2 · LES VISITEURS (page 3) ---------- */
+    {
+      label:'Les visiteurs', title:'Discussion 2 · Les retours des visiteurs',
+      location:"Toujours chez M. Delmas",
+      intro:"Vous passez à la page « Retours des visiteurs ».",
+      context:null,
+      doc:{ title:"Compte-rendu · Page 3 — Retours des visiteurs", stats:[
+        {v:"5", l:"visiteurs, aucune réserve précise sur le bien"}, {v:"4 / 5", l:"ont acheté un autre bien", alert:true}, {v:"1 / 5", l:"encore en réflexion"}
+      ]},
+      outro:"Vous ouvrez la page suivante : l'analyse du marché local.",
+      steps:[
+        { say:"Bon. Et les visiteurs, alors ? Ils ont aimé au moins ?",
+          choices:[
+            { text:"Ils ont aimé, mais personne n'a voulu l'acheter à ce prix-là.", score:-1, faux:true,
+              react:"À ce prix-là ? Il vaut ce qu'il vaut, cet appartement !" },
+            { text:"Oui : localisation, luminosité, vue, aucun n'a formulé de réserve sur l'appartement. Et pourtant, aucun n'a fait d'offre. Voulez-vous que je vous dise ce que sont devenus ces cinq visiteurs ?", score:2,
+              react:"Oui, dites-moi. Je veux savoir." },
+            { text:"Oui, ils ont aimé, mais ils m'ont dit avoir besoin de réfléchir.", score:0,
+              react:"Vous voyez, ils réfléchissent, ils vont revenir !" }
+          ] },
+        { say:"Et ils sont où maintenant, ces cinq personnes ? Ils réfléchissent encore ?",
+          choices:[
+            { text:"Quatre sur cinq ont acheté un autre bien, et vite. Ce n'est pas votre appartement qui a été rejeté : ils ont trouvé ailleurs. Quand un acheteur sérieux trouve le bon rapport qualité-prix, il décide. Qu'est-ce que ça vous inspire ?", score:2,
+              react:"Ils ont acheté ailleurs, et vite... hum." },
+            { text:"Quatre sur cinq ont acheté ailleurs : vous voyez bien qu'ils ne trouvent pas que votre bien vaut ce prix.", score:-1, faux:true,
+              react:"Vous n'en savez rien ! Personne n'a critiqué mon prix, à ce que je sache." },
+            { text:"Quatre sur cinq ont acheté un autre bien, un seul réfléchit encore.", score:0,
+              react:"Un autre bien, alors qu'ils avaient aimé le mien ?" }
+          ] },
+        { say:"Mais si ça achète, c'est que le marché est bon ! Alors pourquoi personne n'a acheté chez moi ?",
+          choices:[
+            { text:"Parce que votre prix est trop élevé, tout simplement.", score:-1, faux:true,
+              react:"Vous me le répétez depuis le début : ça ne prouve rien !" },
+            { text:"C'est exactement la bonne question, M. Delmas. Le marché est actif, et vos visiteurs ont aimé le bien : la différence se joue entre ce qu'ils voient et le prix affiché. Regardons ce que disent les chiffres du marché.", score:2,
+              react:"Bon. Regardons, alors." },
+            { text:"Sans doute qu'ils ont trouvé quelque chose de plus adapté à leur budget.", score:0,
+              react:"Leur budget... Ce n'est donc pas de ma faute." }
+          ] }
+      ]
+    },
+
+    /* ---------- 3 · LE MARCHÉ (page 4) ---------- */
+    {
+      label:'Le marché', title:'Discussion 3 · L\'analyse du marché local',
+      location:"Toujours chez M. Delmas",
+      intro:"Vous passez à la page « Analyse du marché local ».",
+      context:null,
+      doc:{ title:"Compte-rendu · Page 4 — Analyse du marché local", stats:[
+        {v:"4 189 €", l:"/m² — le bien (prix affiché, FAI)", alert:true}, {v:"≈ 3 843 €", l:"/m² — moyenne des références locales"}, {v:"+ 9 %", l:"écart avec la moyenne", alert:true}
+      ]},
+      outro:"Dernière page : la synthèse, et la question du prix.",
+      steps:[
+        { say:"Et ce fameux marché ? Moi, je sais qu'une vue mer à Lacanau, ça vaut de l'or, et que les prix ont beaucoup monté ces dernières années.",
+          choices:[
+            { text:"Sur cinq ans, oui : MeilleursAgents affiche + 7,4 %. Mais sur un an, c'est quasi stable : − 2,4 % chez efficity, + 2,2 % chez MeilleursAgents. Aujourd'hui, ce n'est plus la hausse qui fait le prix : c'est l'écart entre le prix affiché et les références locales.", score:2,
+              react:"Stable... d'accord." },
+            { text:"Le marché est plutôt stable en ce moment.", score:0,
+              react:"Stable ? Alors mon prix est bon, non ?" },
+            { text:"Les prix baissent, il vaut mieux vendre vite avant que ça s'effondre.", score:-1, faux:true,
+              react:"S'effondrer ? Vous voulez me faire peur pour que je baisse !" }
+          ] },
+        { say:"Et puis mon bien n'est pas dans la moyenne : vue mer, balcon de 5 m² plein sud, parking, DPE A... On ne peut pas le comparer à un appartement standard.",
+          choices:[
+            { text:"Une vue mer, ça ne vaut pas autant que vous le pensez.", score:-1, faux:true,
+              react:"Ma vue mer ne vaudrait rien ? Vous vous moquez de moi ?" },
+            { text:"Ce sont de vrais atouts, et c'est pour ça que vos visiteurs ont été séduits. Mais ils les ont vus, et aucun n'a fait d'offre. Votre bien est affiché à 4 189 €/m², les références locales tournent autour de 3 843 €/m² : environ 9 % de plus. Qu'en pensez-vous ?", score:2,
+              react:"9 %... c'est quand même pas énorme." },
+            { text:"Oui, votre bien a de vrais atouts. Mais il est quand même affiché au-dessus du marché.", score:0,
+              react:"Au-dessus de combien ? Vous n'avez pas de chiffre à me donner ?" }
+          ] },
+        { say:"Et ces prix moyens, ce ne sont que des moyennes ! Chaque site dit son chiffre. Pourquoi je devrais m'y fier ?",
+          choices:[
+            { text:"Ces chiffres sont fiables, croyez-moi, c'est mon métier.", score:0,
+              react:"Croyez-moi, croyez-moi... tout le monde dit ça." },
+            { text:"Si vous ne croyez pas les chiffres, je ne peux plus rien pour vous.", score:-1, faux:true,
+              react:"Voilà ! Dès que je pose une question, vous vous braquez." },
+            { text:"Vous avez raison d'être prudent : ce sont des ordres de grandeur. Mais trois sources indépendantes — SeLoger 3 780 €, MeilleursAgents 3 850 €, efficity 3 900 € — disent la même chose, et votre bien est au-dessus des trois. Les acheteurs consultent ces mêmes références.", score:2,
+              react:"Trois sources qui se rejoignent... c'est vrai que c'est troublant." }
+          ] },
+        { say:"Admettons. Mais je n'ai pas envie de brader. Peut-être qu'en attendant un peu, un acheteur qui a les moyens finira par arriver ?",
+          choices:[
+            { text:"Personne ne vous demande de brader, M. Delmas. Rappelez-vous ce que je vous disais à la signature du mandat : plus un bien reste en vente, plus les acheteurs se demandent pourquoi, et plus on risque de finir sous le prix du marché. Chaque semaine trop cher est une semaine perdue.", score:2,
+              react:"Oui... vous me l'aviez dit. Je n'avais pas envie d'y penser." },
+            { text:"On peut attendre encore quelques semaines, mais il ne faudra pas trop traîner.", score:0,
+              react:"Quelques semaines, ça me va. On verra bien." },
+            { text:"Attendre, c'est la pire idée : je vous l'avais bien dit !", score:-1, faux:true,
+              react:"Je vous l'avais bien dit, je vous l'avais bien dit... vous n'avez que ça à la bouche !" }
+          ] }
+      ]
+    },
+
+    /* ---------- 4 · LA DÉCISION (page 5) ---------- */
+    {
+      label:'La décision', title:'Discussion 4 · Synthèse et prix',
+      location:"Chez M. Delmas — dernière page du compte-rendu",
+      intro:"Vous arrivez à la page « Synthèse & pistes d'échange ». C'est le moment de parler prix.",
+      context:null,
+      doc:{ title:"Compte-rendu · Page 5 — Synthèse & pistes d'échange", stats:[
+        {v:"222 000 €", l:"prix actuel affiché", alert:true}, {v:"≈ 204 000 €", l:"prix conseillé (≈ − 8 %), soit ≈ 3 850 €/m²"}
+      ]},
+      outro:null,
+      steps:[
+        { say:"Bon. Vous avez fait le tour des chiffres. Alors, qu'est-ce que vous me proposez ?",
+          choices:[
+            { text:"Je vous propose de baisser le prix à 204 000 €.", score:0,
+              react:"204 000 ?! 18 000 € d'un coup, vous n'y allez pas de main morte." },
+            { text:"Avant de vous proposer quoi que ce soit : si vous deviez retenir une seule chose de ce que nous venons de voir, laquelle serait-ce ?", score:2,
+              react:"Que tout le monde a trouvé l'appartement beau, mais que personne n'a fait d'offre... et que mon prix est plus haut que les références." },
+            { text:"Il faut baisser le prix, c'est la seule solution, sinon vous ne vendrez jamais.", score:-1, faux:true,
+              react:"Voilà, on y est. Vous ne pensez qu'à baisser mon prix." }
+          ] },
+        { say:"Et si je baisse, à quoi ça sert exactement ? Qui me garantit que ça marchera ?",
+          choices:[
+            { text:"Personne ne peut garantir une offre. Voici ce que je recommande : environ 204 000 €, soit 3 850 €/m², aligné sur les références locales et environ 8 % sous le prix actuel. C'est la condition pour que l'annonce soit de nouveau cliquée et que les acheteurs se positionnent.", score:2,
+              react:"204 000 €... ça fait 18 000 € de moins. C'est beaucoup." },
+            { text:"Baissons à 195 000 €, comme ça ça partira tout de suite.", score:-1, faux:true,
+              react:"195 000 ?! Vous voulez me ruiner ?" },
+            { text:"Je pense qu'on pourrait baisser un peu, on verra bien ce que ça donne.", score:0,
+              react:"« Un peu », c'est-à-dire ? Donnez-moi un chiffre." }
+          ] },
+        { say:"Et vous vous rendez compte de ce que ça représente ? À 222 000 €, il me reste 210 000 € net. À 204 000 €, il ne me resterait qu'environ 193 000 €. Chaque euro de baisse, c'est un euro de moins dans ma poche.",
+          choices:[
+            { text:"Ces 17 000 € net, vous les avez déjà perdus en ne m'écoutant pas au départ.", score:-1, faux:true,
+              react:"Alors c'est ma faute, maintenant ? Très agréable." },
+            { text:"C'est un effort, je vous l'accorde, mais c'est nécessaire pour vendre.", score:0,
+              react:"Nécessaire, nécessaire... c'est facile à dire, ce n'est pas votre argent." },
+            { text:"Vous avez raison, l'écart net est d'environ 17 000 €. Comparons deux scénarios : à 204 000 €, l'annonce est alignée et les acheteurs se positionnent dès maintenant ; à 222 000 €, on attend, et si vous devez baisser dans quelques mois, vous risquez de vendre encore moins cher. Lequel des deux vous inquiète le plus ?", score:2,
+              react:"Le second, franchement. Vendre encore moins cher parce que j'ai trop attendu." }
+          ] },
+        { say:"Bon... 204 000 €, ça me fait mal. Vous ne pouvez pas me proposer quelque chose entre les deux ? Un prix intermédiaire, pour voir ?",
+          choices:[
+            { text:"Pourquoi pas, disons 210 000 €, on verra bien ce que ça donne.", score:0 },
+            { text:"Je comprends votre besoin d'y aller par étapes. Un prix intermédiaire, comme 210 000 €, relancerait l'annonce mais resterait au-dessus des références, avec moins de chances de déclencher une offre. À vous de choisir : 204 000 €, aligné sur le marché, ou 210 000 € avec un nouveau point dans trois semaines. Qu'en pensez-vous ?", score:2 },
+            { text:"Non, c'est 204 000 € ou rien, il n'y a pas d'autre option.", score:-1, faux:true }
+          ] }
+      ]
+    }
+  ];
+
+  var ENDINGS = {
+    marche: {
+      headline:"« Allez, on baisse à 204 000 € »",
+      vendor:"Je préfère le faire maintenant plutôt que dans trois mois, en subissant. Allez, 204 000 €. Préparez l'avenant, et relancez-moi vite ces visiteurs, notamment celui qui réfléchit encore.",
+      text:"M. Delmas a fait le chemin lui-même, page après page : il accepte 204 000 €, soit environ 3 850 €/m², aligné sur les références locales. La baisse de prix va relancer l'annonce sur les portails : vous pouvez relancer le visiteur encore en réflexion et les acquéreurs en recherche active. Et parce qu'il a décidé lui-même, il reste confiant dans la suite."
+    },
+    mid: {
+      headline:"« On passe à 210 000 €, pas plus »",
+      vendor:"Je ne peux pas aller plus loin pour l'instant. 210 000 €, et on se revoit dans trois semaines pour faire le point. Si ça ne bouge pas, on en reparlera.",
+      text:"M. Delmas bouge, mais s'arrête à mi-chemin : 210 000 €, soit environ 3 962 €/m², encore autour de 3 % au-dessus des références. Cela peut relancer les visites sans garantir d'offre. Fixez le rendez-vous dans trois semaines, avec les nouveaux indicateurs (taux d'attractivité, visites, offres) pour reposer sereinement la question du dernier ajustement."
+    },
+    refus: {
+      headline:"« Je maintiens mon prix pour l'instant »",
+      vendor:"Non, je préfère attendre encore un peu. Je maintiens 222 000 €. Ça finira bien par venir. On en reparle dans un mois.",
+      text:"M. Delmas n'a pas eu le déclic : il maintient 222 000 €. Les visiteurs continuent d'acheter ailleurs pendant que l'annonce vieillit sur les portails, et la baisse, quand elle viendra, sera plus tardive et plus difficile à faire accepter. Ne quittez pas le rendez-vous sans date de point d'étape, avec les indicateurs à jour."
+    }
+  };
+
+  var LADDER = [
+    { key:'refus',  tag:'Issue 1', lbl:'Refus de baisse', prix:'222 000 €' },
+    { key:'mid',    tag:'Issue 2', lbl:'Mi-chemin',       prix:'210 000 €' },
+    { key:'marche', tag:'Issue 3', lbl:'Prix du marché',  prix:'204 000 €' }
+  ];
+
+  var PATH_NOTES = [
+    "Partir des faits (14 appels, 5 visites, 0 offre, 4 % d'attractivité) et laisser le vendeur les interpréter avant de conclure.",
+    "Ils ont aimé le bien, mais 4 sur 5 ont acheté ailleurs : le sujet n'est pas le bien, c'est le rapport qualité-prix perçu.",
+    "Trois sources convergent (3 780 à 3 900 €/m²) ; le bien, à 4 189 €/m², est environ 9 % au-dessus, sur un marché stable.",
+    "Faire dire au vendeur ce qu'il retient, chiffrer l'impact net (environ 17 000 €) et comparer « agir maintenant » et « attendre »."
+  ];
+
+  var state = null;
+  var $ = function(id){ return document.getElementById(id); };
+  var transcript = $('transcript'), tray = $('tray'), stepperEl = $('stepper');
+
+  function resetState(){
+    state = { sceneIdx:0, stepIdx:0, total:0, faux:0, lastFaux:false, sceneScores:[0,0,0,0], pendingReact:'' };
+  }
+
+  function shuffle(arr){
+    var a = arr.slice();
+    for(var i = a.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function buildStepper(){
+    stepperEl.innerHTML = '';
+    SCENES.forEach(function(sc, i){
+      var seg = document.createElement('div');
+      seg.className = 'step-seg';
+      seg.innerHTML = '<div class="bar"><i></i></div><div class="lbl">' + (i+1) + ' · ' + sc.label + '</div>';
+      stepperEl.appendChild(seg);
+    });
+  }
+  function updateStepper(){
+    Array.prototype.forEach.call(stepperEl.children, function(seg, i){
+      seg.classList.toggle('done', i < state.sceneIdx);
+      seg.classList.toggle('active', i === state.sceneIdx);
+    });
+  }
+
+  function scrollDown(){ transcript.scrollTop = transcript.scrollHeight; }
+
+  function addNarration(text){
+    var d = document.createElement('div');
+    d.className = 'narration';
+    d.textContent = text;
+    transcript.appendChild(d);
+    scrollDown();
+  }
+
+  function addSceneBreak(i){
+    var scene = SCENES[i];
+    var wrap = document.createElement('div');
+    wrap.className = 'scene-break';
+
+    var divider = document.createElement('div');
+    divider.className = 'divider';
+    divider.innerHTML = '<span class="line"></span><span class="num">' + (i+1) + '</span><span class="ttl"></span><span class="line"></span>';
+    divider.querySelector('.ttl').textContent = scene.title;
+    wrap.appendChild(divider);
+
+    var loc = document.createElement('div');
+    loc.className = 'loc';
+    loc.textContent = scene.location;
+    wrap.appendChild(loc);
+
+    var introLine = document.createElement('div');
+    introLine.className = 'intro-line';
+    introLine.textContent = scene.intro;
+    wrap.appendChild(introLine);
+
+    if(scene.context){
+      var ctx = document.createElement('div');
+      ctx.className = 'discovery';
+      ctx.textContent = scene.context;
+      wrap.appendChild(ctx);
+    }
+
+    var doc = document.createElement('div');
+    doc.className = 'doc-card';
+    var h = document.createElement('div');
+    h.className = 'doc-h';
+    h.textContent = scene.doc.title;
+    doc.appendChild(h);
+    var stats = document.createElement('div');
+    stats.className = 'doc-stats';
+    scene.doc.stats.forEach(function(s){
+      var st = document.createElement('div');
+      st.className = 'stat' + (s.alert ? ' alert' : '');
+      var b = document.createElement('b'); b.textContent = s.v;
+      var sp = document.createElement('span'); sp.textContent = s.l;
+      st.appendChild(b); st.appendChild(sp);
+      stats.appendChild(st);
+    });
+    doc.appendChild(stats);
+    wrap.appendChild(doc);
+
+    transcript.appendChild(wrap);
+    scrollDown();
+  }
+
+  function addMessage(speakerKey, text, side){
+    var meta = SPEAKERS[speakerKey];
+    var row = document.createElement('div');
+    row.className = 'msg-row ' + side;
+    var avatar = document.createElement('span');
+    avatar.className = 'avatar';
+    avatar.style.background = 'var(' + meta.colorVar + ')';
+    avatar.textContent = meta.name.charAt(0) === 'M' ? 'D' : meta.name.charAt(0);
+    var col = document.createElement('div');
+    col.className = 'bubble-col';
+    var name = document.createElement('div');
+    name.className = 'msg-name';
+    name.textContent = meta.name;
+    var bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    if(side === 'right'){ bubble.style.background = 'var(' + meta.colorVar + ')'; }
+    else { bubble.style.borderLeft = '3px solid var(' + meta.colorVar + ')'; }
+    bubble.textContent = text;
+    col.appendChild(name); col.appendChild(bubble);
+    row.appendChild(avatar); row.appendChild(col);
+    transcript.appendChild(row);
+    scrollDown();
+  }
+
+  function showTyping(cb){
+    var row = document.createElement('div');
+    row.className = 'msg-row left';
+    row.innerHTML = '<span class="avatar" style="background:var(--ink-soft)">…</span><div class="typing"><i></i><i></i><i></i></div>';
+    transcript.appendChild(row);
+    scrollDown();
+    setTimeout(function(){ row.remove(); cb(); }, 550);
+  }
+
+  function clearTray(){ tray.innerHTML = ''; }
+
+  function continueButton(label, handler){
+    clearTray();
+    var wrap = document.createElement('div');
+    wrap.className = 'continue-wrap';
+    var b = document.createElement('button');
+    b.className = 'btn btn-primary';
+    b.type = 'button';
+    b.textContent = label;
+    b.addEventListener('click', function(){ clearTray(); handler(); });
+    wrap.appendChild(b);
+    tray.appendChild(wrap);
+  }
+
+  function loadScene(i){
+    state.sceneIdx = i; state.stepIdx = 0; state.pendingReact = '';
+    updateStepper();
+    addSceneBreak(i);
+    clearTray();
+    showTyping(showStep);
+  }
+
+  function showStep(){
+    var scene = SCENES[state.sceneIdx];
+    var step = scene.steps[state.stepIdx];
+    var text = (state.pendingReact ? state.pendingReact + ' ' : '') + step.say;
+    addMessage('vendeur', text, 'left');
+    clearTray();
+    shuffle(step.choices).forEach(function(choice){
+      var b = document.createElement('button');
+      b.className = 'choice-btn';
+      b.type = 'button';
+      b.textContent = choice.text;
+      b.addEventListener('click', function(){ chooseOption(choice); });
+      tray.appendChild(b);
+    });
+    tray.scrollTop = 0;
+  }
+
+  function chooseOption(choice){
+    state.total += choice.score;
+    state.sceneScores[state.sceneIdx] += choice.score;
+    if(choice.faux){ state.faux += 1; }
+    var scene = SCENES[state.sceneIdx];
+    var isLastStep = state.stepIdx + 1 >= scene.steps.length;
+    state.lastFaux = !!choice.faux && isLastStep && state.sceneIdx === SCENES.length - 1;
+
+    addMessage('agent', choice.text, 'right');
+    clearTray();
+
+    showTyping(function(){
+      if(!isLastStep){
+        state.pendingReact = choice.react || '';
+        state.stepIdx += 1;
+        showStep();
+        return;
+      }
+      sceneEnd(choice);
+    });
+  }
+
+  function computeEnding(){
+    var t = state.total, f = state.faux;
+    if(t < 12 || f >= 4) return 'refus';
+    if(t >= 22 && f <= 1 && !state.lastFaux) return 'marche';
+    return 'mid';
+  }
+
+  function sceneEnd(choice){
+    var scene = SCENES[state.sceneIdx];
+    var isLastScene = state.sceneIdx === SCENES.length - 1;
+    if(!isLastScene){
+      if(choice.react){ addMessage('vendeur', choice.react, 'left'); }
+      addNarration(scene.outro);
+      continueButton('Page suivante →', function(){ loadScene(state.sceneIdx + 1); });
+    } else {
+      state.endKey = computeEnding();
+      addMessage('vendeur', ENDINGS[state.endKey].vendor, 'left');
+      continueButton('Voir le résultat →', showEnding);
+    }
+  }
+
+  function showEnding(){
+    $('screen-game').hidden = true;
+    $('screen-ending').hidden = false;
+    window.scrollTo({ top:0, behavior:'auto' });
+
+    var key = state.endKey;
+    var e = ENDINGS[key];
+    $('end-headline').textContent = e.headline;
+    $('end-text').textContent = e.text;
+
+    var ladder = $('end-ladder');
+    ladder.innerHTML = '';
+    LADDER.forEach(function(step, idx){
+      if(idx > 0){
+        var arrow = document.createElement('div');
+        arrow.className = 'arrow';
+        arrow.textContent = '→';
+        ladder.appendChild(arrow);
+      }
+      var cell = document.createElement('div');
+      cell.className = 'cell' + (step.key === key ? ' hit' : '');
+      cell.innerHTML = '<span class="tag">' + step.tag + '</span><span class="lbl">' + step.lbl + '</span><span class="prix">' + step.prix + '</span>';
+      ladder.appendChild(cell);
+    });
+
+    var path = $('end-path');
+    path.innerHTML = '';
+    SCENES.forEach(function(sc, i){
+      var max = sc.steps.length * 2;
+      var ratio = state.sceneScores[i] / max;
+      var cls = 'ko', lbl = 'À reprendre';
+      if(ratio >= 0.75){ cls = 'ok'; lbl = 'Solide'; }
+      else if(ratio >= 0.4){ cls = 'mid'; lbl = 'À affiner'; }
+      var row = document.createElement('div');
+      row.className = 'path-row';
+      row.innerHTML = '<span class="pill ' + cls + '">' + lbl + '</span><div class="pt"></div><div class="pd"></div>';
+      row.querySelector('.pt').textContent = (i+1) + ' · ' + sc.label;
+      row.querySelector('.pd').textContent = PATH_NOTES[i];
+      path.appendChild(row);
+    });
+
+    var tips = $('end-tips');
+    tips.innerHTML = '';
+    var prise = state.total >= 22
+      ? { cls:'good', label:'Prise de conscience — ce qui a payé', text:"Vous avez présenté les faits, posé des questions ouvertes et laissé M. Delmas tirer lui-même les conclusions : c'est ce qui rend la baisse acceptable." }
+      : { cls:'bad', label:'Prise de conscience — ce qui a manqué', text:"Trop de réponses sont restées factuelles ou passives : les chiffres ont été donnés, mais M. Delmas n'a pas été amené à les interpréter lui-même, ni à mesurer le coût de l'attente." };
+    var tact = state.faux === 0
+      ? { cls:'good', label:'Tact — ce qui a payé', text:"Aucun « je vous l'avais bien dit », aucun ultimatum : vous avez accompagné la décision sans jamais la forcer." }
+      : { cls:'bad', label:'Tact — ce qui a manqué', text:"Une ou plusieurs réponses ont mis M. Delmas sur la défensive (reproche, pression, minimisation ou baisse arbitraire). Chaque braquage renforce sa résistance au lieu de la dissiper." };
+    [prise, tact].forEach(function(t){
+      var d = document.createElement('div');
+      d.className = 'tip ' + t.cls;
+      d.innerHTML = '<b></b><span></span>';
+      d.querySelector('b').textContent = t.label;
+      d.querySelector('span').textContent = t.text;
+      tips.appendChild(d);
+    });
+  }
+
+  function startGame(){
+    $('screen-intro').hidden = true;
+    $('screen-ending').hidden = true;
+    $('screen-game').hidden = false;
+    transcript.innerHTML = '';
+    resetState();
+    buildStepper();
+    loadScene(0);
+  }
+
+  $('btn-start').addEventListener('click', startGame);
+  $('btn-replay').addEventListener('click', function(){
+    $('screen-ending').hidden = true;
+    $('screen-intro').hidden = false;
+    window.scrollTo({ top:0, behavior:'smooth' });
+  });
+
+})();
+</script>
+
+</body>
+</html>
